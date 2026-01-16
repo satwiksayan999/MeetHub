@@ -16,7 +16,9 @@ router.post('/register', [
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      // Return first error message in a consistent format
+      const firstError = errors.array()[0];
+      return res.status(400).json({ error: firstError.msg || 'Validation failed' });
     }
 
     const { name, email, password, timezone = 'UTC' } = req.body;
@@ -64,10 +66,17 @@ router.post('/register', [
     });
   } catch (error) {
     console.error('Register error:', error);
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     
     // Provide more specific error messages
     if (error.code === 'ER_NO_SUCH_TABLE') {
       return res.status(500).json({ error: 'Database not initialized. Please run: npm run setup-db' });
+    }
+    
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ error: 'Email already registered' });
     }
     
     if (!process.env.JWT_SECRET) {
@@ -91,7 +100,9 @@ router.post('/login', [
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      // Return first error message in a consistent format
+      const firstError = errors.array()[0];
+      return res.status(400).json({ error: firstError.msg || 'Validation failed' });
     }
 
     const { email, password } = req.body;

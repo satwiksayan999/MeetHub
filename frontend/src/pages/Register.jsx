@@ -39,7 +39,21 @@ export default function Register() {
       await register(formData.name, formData.email, formData.password);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.error || 'Registration failed. Please try again.');
+      console.error('Registration error:', err);
+      // Handle different error formats
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+        errorMessage = err.response.data.errors[0]?.msg || errorMessage;
+      } else if (err.message) {
+        errorMessage = err.message;
+      } else if (err.response?.status === 0 || !err.response) {
+        errorMessage = 'Unable to connect to server. Please check your internet connection.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
