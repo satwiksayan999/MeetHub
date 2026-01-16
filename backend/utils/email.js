@@ -3,31 +3,42 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Create transporter
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+// Create transporter only if email is configured
+let transporter = null;
 
-// Verify transporter configuration
-transporter.verify((error, success) => {
-  if (error) {
-    console.log('Email configuration error:', error);
-  } else {
-    console.log('Email server is ready to send messages');
-  }
-});
+if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+  transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+    // Add timeout to prevent hanging
+    connectionTimeout: 5000,
+    greetingTimeout: 5000,
+    socketTimeout: 5000,
+  });
+
+  // Verify transporter configuration asynchronously (non-blocking)
+  transporter.verify((error, success) => {
+    if (error) {
+      console.log('⚠️  Email configuration error (emails will be skipped):', error.message);
+      console.log('   Email functionality will be disabled until SMTP is properly configured.');
+    } else {
+      console.log('✅ Email server is ready to send messages');
+    }
+  });
+} else {
+  console.log('ℹ️  Email not configured - SMTP_USER and SMTP_PASS not set. Email features will be disabled.');
+}
 
 /**
  * Send booking confirmation email to invitee
  */
 export async function sendBookingConfirmationToInvitee(booking, eventType, hostName) {
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+  if (!transporter || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
     console.log('Email not configured - skipping invitee confirmation email');
     return;
   }
@@ -123,7 +134,7 @@ We look forward to meeting with you!
  * Send booking notification email to host
  */
 export async function sendBookingNotificationToHost(booking, eventType, inviteeAnswers = {}) {
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+  if (!transporter || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
     console.log('Email not configured - skipping host notification email');
     return;
   }
@@ -253,7 +264,7 @@ Please make sure to add this to your calendar!
  * Send cancellation email to invitee
  */
 export async function sendCancellationToInvitee(booking, eventType, hostName) {
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+  if (!transporter || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
     console.log('Email not configured - skipping cancellation email to invitee');
     return;
   }
@@ -305,7 +316,7 @@ export async function sendCancellationToInvitee(booking, eventType, hostName) {
  * Send cancellation notification to host
  */
 export async function sendCancellationToHost(booking, eventType, inviteeName) {
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+  if (!transporter || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
     console.log('Email not configured - skipping cancellation email to host');
     return;
   }
