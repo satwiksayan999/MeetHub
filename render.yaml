@@ -1,0 +1,59 @@
+services:
+  # Backend API Service
+  - type: web
+    name: meethub-backend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DB_HOST
+        sync: false  # Set manually from external MySQL database
+      - key: DB_USER
+        sync: false  # Set manually from external MySQL database
+      - key: DB_PASSWORD
+        sync: false  # Set manually from external MySQL database
+      - key: DB_NAME
+        sync: false  # Set manually from external MySQL database
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false  # Set this manually after frontend is deployed
+      - key: SMTP_HOST
+        sync: false  # Configure email settings manually
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_SECURE
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+
+  # Frontend Static Site
+  - type: web
+    name: meethub-frontend
+    env: static
+    region: oregon
+    plan: free
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false  # Set this to your backend URL after deployment
+
+# Note: Render free tier only supports PostgreSQL
+# Since this project uses MySQL, you need to use an external MySQL database
+# Recommended free options: PlanetScale, Railway, or AWS RDS (free tier)
+# Remove the database section below and configure DB connection manually via environment variables
+#
+# databases:
+#   - name: meethub-database
+#     databaseName: meethub
+#     user: meethub_user
+#     plan: free
