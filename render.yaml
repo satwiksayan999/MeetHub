@@ -1,0 +1,66 @@
+services:
+  # Backend API Service
+  - type: web
+    name: meethub-backend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DB_HOST
+        fromDatabase:
+          name: meethub-database
+          property: host
+      - key: DB_USER
+        fromDatabase:
+          name: meethub-database
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: meethub-database
+          property: password
+      - key: DB_NAME
+        fromDatabase:
+          name: meethub-database
+          property: database
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false  # Set this manually after frontend is deployed
+      - key: SMTP_HOST
+        sync: false  # Configure email settings manually
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_SECURE
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+
+  # Frontend Static Site
+  - type: web
+    name: meethub-frontend
+    env: static
+    region: oregon
+    plan: free
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false  # Set this to your backend URL after deployment
+
+databases:
+  # Database - Note: Render free tier only supports PostgreSQL
+  # If you need MySQL, use an external service or upgrade to a paid plan
+  - name: meethub-database
+    databaseName: meethub
+    user: meethub_user
+    plan: free
+    # To use MySQL, uncomment below and comment out the above, but note it requires a paid plan:
+    # databaseType: mysql  # Not available on free tier
