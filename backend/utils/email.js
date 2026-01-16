@@ -7,7 +7,7 @@ dotenv.config();
 let transporter = null;
 
 if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-  transporter = nodemailer.createTransport({
+  const smtpConfig = {
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT || '587'),
     secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
@@ -15,19 +15,38 @@ if (process.env.SMTP_USER && process.env.SMTP_PASS) {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    // Add timeout to prevent hanging
-    connectionTimeout: 5000,
-    greetingTimeout: 5000,
-    socketTimeout: 5000,
-  });
+    // Increased timeouts for Render's network
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000, // 10 seconds
+    socketTimeout: 10000, // 10 seconds
+    // For Gmail with TLS
+    requireTLS: true,
+    tls: {
+      rejectUnauthorized: false // Allow self-signed certificates
+    }
+  };
+
+  // For port 465 with SSL
+  if (parseInt(process.env.SMTP_PORT || '587') === 465) {
+    smtpConfig.secure = true;
+    smtpConfig.requireTLS = false;
+  }
+
+  transporter = nodemailer.createTransport(smtpConfig);
 
   // Verify transporter configuration asynchronously (non-blocking)
   transporter.verify((error, success) => {
     if (error) {
       console.log('⚠️  Email configuration error (emails will be skipped):', error.message);
+      console.log('   Error code:', error.code);
+      console.log('   SMTP Host:', process.env.SMTP_HOST || 'smtp.gmail.com');
+      console.log('   SMTP Port:', process.env.SMTP_PORT || '587');
       console.log('   Email functionality will be disabled until SMTP is properly configured.');
+      console.log('   Note: Render free tier may have network restrictions. Consider using SendGrid or similar service.');
     } else {
       console.log('✅ Email server is ready to send messages');
+      console.log('   SMTP Host:', process.env.SMTP_HOST || 'smtp.gmail.com');
+      console.log('   SMTP Port:', process.env.SMTP_PORT || '587');
     }
   });
 } else {
